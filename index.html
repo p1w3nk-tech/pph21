@@ -1256,7 +1256,11 @@ function init(){
     };
     input.click();
   };
-
+document.getElementById("btnRekapan").onclick = ()=>renderRekapan();
+  document.getElementById("btnPph21").onclick = ()=>renderPph21();
+  document.getElementById("btnA1").onclick = ()=>renderPphA1();
+}
+window.onload = init;
   // ensure arrays exist
   MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
   // load existing or seed
