@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rekapan & Hitung PPh21 MNU SEMARANG</title>
+<style>
+  body{font-family:Inter,Arial,Helvetica,sans-serif;margin:14px;background:#f7fafc;color:#0f172a}
+  h1{margin:0 0 12px;font-size:12px}
+  .tabs{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+  .tabs button{padding:6px 10px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer}
+  .tabs button.active{background:#0ea5a4;color:#fff;border-color:#0ea5a4}
+  .panel{background:#fff;border:1px solid #e6e9ee;padding:12px;border-radius:8px}
+  .controls{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .subtabs button{padding:6px 8px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+  .subtabs button.active{background:#111827;color:#fff;border-color:#111827}
+  table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px}
+  th,td{border:1px solid #d1d5db;padding:6px;text-align:left;vertical-align:middle}
+  th{background:#000 !important;color:#fff !important;font-weight:600;background:#f1f5f9;font-weight:600}
+  td.number{text-align:right;white-space:nowrap}
+  td[contenteditable]{background:#fffceb}
+  .btn{padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+  .btn.primary{background:#0ea5a4;color:#fff;border-color:#0ea5a4}
+  .out-row{background:#fff0f0}
+  .total-foot{background:#eef2ff;font-weight:700}
+  .muted{color:#6b7280;font-size:13px}
+  small.note{display:block;margin-top:6px;color:#6b7280}
+  select.nikselect{min-width:180px}
+  .aksi-group button{margin-right:4px}
+  table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px}
+th,td{border:1px solid #d1d5db;padding:6px;text-align:left;vertical-align:middle}
+th{background:#000 !important;color:#fff !important;font-weight:600;background:#f1f5f9;font-weight:600}
+/* --- Styling tabel agar lebih kecil, rapi, dan berwarna --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 12px;          /* lebih kecil supaya muat 1 layar */
+  table-layout: auto;
+}
+
+th, td {
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;         /* padding diperkecil */
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: #0ea5a4;      /* warna header hijau toska */
+  color: #fff;              /* teks putih */
+  font-weight: 600;
+}
+
+tr:nth-child(even) td {
+  background: #f9fafb;      /* zebra striping abu muda */
+}
+
+tr:hover td {
+  background: #e0f2f1;      /* highlight saat hover */
+}
+
+td.number {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tfoot td {
+  background: #eef2ff;      /* warna khusus baris total */
+  font-weight: bold;
+}
+/* Kolom NIK di Rekapan & PPh21 lebih kecil + wrap */
+td.col-nik, th.col-nik {
+  width: 80px;          /* atur lebar kolom */
+  max-width: 100px;
+  white-space: normal;  /* supaya bisa wrap */
+  word-wrap: break-word;
+  font-size: 11px;      /* lebih kecil */
+}
+/* Header tabel selalu terlihat saat scroll */
+table thead th {
+  position: sticky;
+  top: 0;
+  background: #f1f1f1; /* warna latar supaya tidak transparan */
+  z-index: 2; /* pastikan header di atas cell */
+  border-bottom: 2px solid #ccc;
+}
+
+/* Kolom pertama ikut freeze (opsional, biasanya untuk NIK) */
+table th:first-child,
+table td:first-child {
+  position: sticky;
+  left: 0;
+  background: #fff; /* latar putih supaya tidak menimpa cell lain */
+  z-index: 3;
+}
+</style>
+
+<!-- >>> tambahan untuk import/export Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+<body>
+<h1>Rekapan & Hitung PPh21 — Final v10 (with TER, import/export)</h1>
+
+<div class="tabs">
+  <button id="tabKaryawanBtn" class="active">Karyawan</button>
+  <button id="tabRekapanBtn">Rekapan</button>
+  <button id="tabPphBtn">Hitung PPh21</button>
+  <div style="flex:1"></div>
+  <label>Tahun: <input type="number" id="tahunBerjalan" min="2000" max="2100" style="width:80px"></label>
+<label>Bulan: <select id="bulanBerjalan"></select></label>
+<button id="btnSave" class="btn primary">💾 Simpan</button>
+  <button id="btnLoad" class="btn">📂 Muat</button>
+</div>
+
+<div id="karyawan" class="panel">
+  <div class="controls">
+    <input type="text" id="searchKaryawan" placeholder="Cari NIK / Nama..." style="flex:1;padding:4px">
+    <button id="addKaryawan" class="btn">+ Tambah Karyawan</button>
+    <button id="delKaryawan" class="btn">🗑 Hapus Terpilih</button>
+    <!-- >>> tambahan import/export karyawan -->
+    <button id="btnImportKaryawan" class="btn">📥 Import Karyawan</button>
+    <button id="btnExportKaryawan" class="btn">📤 Export Karyawan</button>
+	<label>Tahun: <input type="number" id="tahunBerjalan" style="width:80px" onchange="gantiTahun()"></label>
+    <label>Bulan berjalan: <select id="bulanBerjalan"></select></label>
+    <button id="updateStatus" class="btn">🔄 Update Status</button>
+  </div>
+  <table id="tblKaryawan">
+    <thead><tr><th></th><th>NIK</th><th>Nama</th><th>Departemen</th><th>Bagian</th><th>Jabatan</th><th>Start (YYYY-MM)</th><th>Finish (YYYY-MM)</th><th>Status</th><th>L/P</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div style="display:flex;gap:12px">
+    <div style="flex:1">
+      <h4>Karyawan Aktif</h4>
+      <table id="tblAktif"><thead><tr><th>NIK</th><th>Nama</th><th>Departemen</th><th>Jabatan</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div style="flex:1">
+      <h4>Karyawan Out</h4>
+      <table id="tblOut"><thead><tr><th>NIK</th><th>Nama</th><th>Departemen</th><th>Jabatan</th><th>Finish</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <small class="note">Format tanggal: <code>YYYY-MM</code>. Contoh: 2025-06</small>
+</div>
+
+<div id="rekapan" class="panel" style="display:none">
+  <div class="controls"><strong>Rekapan per Bulan</strong></div>
+  <input type="text" id="searchRekapan" placeholder="Cari NIK / Nama..." style="flex:1;padding:4px">
+  <div id="rekapanSubtabs" class="subtabs"></div>
+  <div id="rekapanContainer"></div>
+</div>
+
+<div id="pph21" class="panel" style="display:none">
+  <div class="controls"><strong>Hitung PPh21 per Bulan</strong></div>
+  <input type="text" id="searchPph" placeholder="Cari NIK / Nama..." style="flex:1;padding:4px">
+  <div id="pphSubtabs" class="subtabs"></div>
+  <div id="pphContainer"></div>
+</div>
+
+<footer class="muted">Data disimpan di <b>localStorage</b>. File ini offline dan berjalan di browser Anda.</footer>
+
+<script>
+function setupSearch(inputId, containerSelector){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  input.onkeyup = function(){
+    const filter = this.value.toLowerCase();
+    // cari semua baris <tr> dalam tabel yang ada di dalam container
+    const rows = document.querySelectorAll(`${containerSelector} tr`);
+    rows.forEach(row=>{
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? '' : 'none';
+    });
+  };
+}
+
+function activateSearchBars(){
+  setupSearch('searchKaryawan','#tblKaryawan tbody');
+  setupSearch('searchRekapan','#rekapanContainer');
+  setupSearch('searchPph','#pphContainer');
+}
+// ---------- Utilities ----------
+const MONTHS = ['jan','feb','mar','apr','mei','jun','jul','agu','sep','okt','nov','des'];
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const SEL_YEAR = localStorage.getItem('tahun_terpilih') || new Date().getFullYear();
+const LS_KEY = 'rekapan_pph21_' + SEL_YEAR;
+
+function $(s){return document.querySelector(s)}
+function $all(s){return Array.from(document.querySelectorAll(s))}
+function formatNumber(n){ if(n==null||n==='') return ''; n = Number(n)||0; return Math.round(n).toLocaleString('id-ID'); }
+function parseNumber(s){ if(s==null||s==='') return 0; return Math.round(Number(String(s).replace(/\./g,'').replace(/,/g,'.'))||0); }
+
+// ---------- Data model ----------
+let karyawan = [];
+let rekapanData = {}; // rekapanData[month] = [rows]
+let pphData = {};     // pphData[month] = [rows]
+
+// Rekapan columns (unchanged)
+const REK_COLS = [
+  'NIK','Nama','Departemen','Bagian','Jabatan',
+  'Total Allowance','Total Gaji',
+  'Tunj Gapok','Tunj THR','Tunj Rapel','Tunj Lembur','Tunj Lain2','Tunj Pengobatan','Tunj Mkn','Tunj Pulsa','Tunj Transp','Tunj Sewa Kend','Komisi','Tunj Gratifikasi','Tunj Uniform','Insurance','Tunj Pesangon',
+  'Pot Absen','Iuran JKK 0,24%','Iuran JHT 3,7%','Iuran JHT 2%','Iuran JKM 0,30%','Iuran JP 2%','Iuran JP 1%','BPJS Kes 4%','BPJS Kes 1%'
+];
+
+// ---------- Mapping PTKP & TER ----------
+const PTKP_MAP = {
+  'TK/0': 54000000,
+  'TK/1': 58500000,
+  'TK/2': 63000000,
+  'TK/3': 67500000,
+  'K/0' : 58500000,
+  'K/1' : 63000000,
+  'K/2' : 67500000,
+  'K/3' : 72000000
+};
+function getTER(status){
+  if(['TK/0','TK/1','K/0'].includes(status)) return 'A';
+  if(['TK/2','TK/3','K/1','K/2'].includes(status)) return 'B';
+  if(status==='K/3') return 'C';
+  return '';
+}
+
+// ---------- TER tarif table ----------
+const TER_TABLE = {
+  A: [
+    {max: 5400000, rate: 0},
+    {max: 5650000, rate: 0.25},
+    {max: 5950000, rate: 0.5},
+    {max: 6300000, rate: 0.75},
+    {max: 6750000, rate: 1},
+    {max: 7500000, rate: 1.25},
+    {max: 8550000, rate: 1.5},
+    {max: 9650000, rate: 1.75},
+    {max: 10050000, rate: 2},
+    {max: 10350000, rate: 2.25},
+    {max: 10700000, rate: 2.5},
+    {max: 11050000, rate: 3},
+    {max: 11600000, rate: 3.5},
+    {max: 12500000, rate: 4},
+    {max: 13750000, rate: 5},
+    {max: 15100000, rate: 6},
+    {max: 16950000, rate: 7},
+    {max: 19750000, rate: 8},
+    {max: 24150000, rate: 9},
+    {max: 26450000, rate: 10},
+    {max: 28000000, rate: 11},
+    {max: 30050000, rate: 12},
+    {max: 32400000, rate: 13},
+    {max: 35400000, rate: 14},
+    {max: 39100000, rate: 15},
+    {max: 43850000, rate: 16},
+    {max: 47800000, rate: 17},
+    {max: 51400000, rate: 18},
+    {max: 56300000, rate: 19},
+    {max: 62200000, rate: 20},
+    {max: 68600000, rate: 21},
+    {max: 77500000, rate: 22},
+    {max: 89000000, rate: 23},
+    {max: 103000000, rate: 24},
+    {max: 125000000, rate: 25},
+    {max: 157000000, rate: 26},
+    {max: 206000000, rate: 27},
+    {max: 337000000, rate: 28},
+    {max: 454000000, rate: 29},
+    {max: 550000000, rate: 30},
+    {max: 695000000, rate: 31},
+    {max: 910000000, rate: 32},
+    {max: 1400000000, rate: 33},
+    {max: Infinity, rate: 34}
+  ],
+  B: [
+    {max: 6200000, rate: 0},
+    {max: 6500000, rate: 0.25},
+    {max: 6850000, rate: 0.5},
+    {max: 7300000, rate: 0.75},
+    {max: 9200000, rate: 1},
+    {max: 10750000, rate: 1.5},
+    {max: 11250000, rate: 2},
+    {max: 11600000, rate: 2.5},
+    {max: 12600000, rate: 3},
+    {max: 13600000, rate: 4},
+    {max: 14950000, rate: 5},
+    {max: 16400000, rate: 6},
+    {max: 18450000, rate: 7},
+    {max: 21850000, rate: 8},
+    {max: 26000000, rate: 9},
+    {max: 27700000, rate: 10},
+    {max: 29350000, rate: 11},
+    {max: 31450000, rate: 12},
+    {max: 33950000, rate: 13},
+    {max: 37100000, rate: 14},
+    {max: 41100000, rate: 15},
+    {max: 45800000, rate: 16},
+    {max: 49500000, rate: 17},
+    {max: 53800000, rate: 18},
+    {max: 58500000, rate: 19},
+    {max: 64000000, rate: 20},
+    {max: 71000000, rate: 21},
+    {max: 80000000, rate: 22},
+    {max: 93000000, rate: 23},
+    {max: 109000000, rate: 24},
+    {max: 129000000, rate: 25},
+    {max: 163000000, rate: 26},
+    {max: 211000000, rate: 27},
+    {max: 374000000, rate: 28},
+    {max: 459000000, rate: 29},
+    {max: 555000000, rate: 30},
+    {max: 704000000, rate: 31},
+    {max: 957000000, rate: 32},
+    {max: 1405000000, rate: 33},
+    {max: Infinity, rate: 34}
+  ],
+  C: [
+    {max: 6600000, rate: 0},
+    {max: 6950000, rate: 0.25},
+    {max: 7350000, rate: 0.5},
+    {max: 7800000, rate: 0.75},
+    {max: 8850000, rate: 1},
+    {max: 9800000, rate: 1.25},
+    {max: 10950000, rate: 1.5},
+    {max: 11200000, rate: 1.75},
+    {max: 12050000, rate: 2},
+    {max: 12950000, rate: 3},
+    {max: 14150000, rate: 4},
+    {max: 15550000, rate: 5},
+    {max: 17050000, rate: 6},
+    {max: 19500000, rate: 7},
+    {max: 22700000, rate: 8},
+    {max: 26600000, rate: 9},
+    {max: 28100000, rate: 10},
+    {max: 30100000, rate: 11},
+    {max: 32600000, rate: 12},
+    {max: 35400000, rate: 13},
+    {max: 38900000, rate: 14},
+    {max: 43000000, rate: 15},
+    {max: 47400000, rate: 16},
+    {max: 51200000, rate: 17},
+    {max: 55800000, rate: 18},
+    {max: 60400000, rate: 19},
+    {max: 66700000, rate: 20},
+    {max: 74500000, rate: 21},
+    {max: 83200000, rate: 22},
+    {max: 95600000, rate: 23},
+    {max: 110000000, rate: 24},
+    {max: 134000000, rate: 25},
+    {max: 169000000, rate: 26},
+    {max: 221000000, rate: 27},
+    {max: 390000000, rate: 28},
+    {max: 463000000, rate: 29},
+    {max: 561000000, rate: 30},
+    {max: 709000000, rate: 31},
+    {max: 965000000, rate: 32},
+    {max: 1419000000, rate: 33},
+    {max: Infinity, rate: 34}
+  ]
+};
+
+function getTarif(terType, bruto){
+  if(!terType) return 0;
+  const tbl = TER_TABLE[terType];
+  if(!tbl) return 0;
+  for(const row of tbl){
+    if(bruto <= row.max) return row.rate;
+  }
+  return 0;
+}
+
+// ---------- PPh columns (edited) ----------
+const PPH_COLS = [
+  'NIK','Nama','Departemen','Jabatan','Status',
+  'Gaji Pokok','Lembur','Tunj PPh21',
+  'Iuran JKK 0,24%','Iuran JKM 0,30%','Iuran BPJS Kes 4%',
+  'Total Gaji+Lembur+pph21','Bonus+THR','Total Bruto',
+  'PTKP','TER','Tarif',
+  'PPh 21 Terutang','Koreksi PPh21','Total PPh 21 Terutang'
+];
+// ---------- Kolom A1 Tahunan ----------
+const PPH_A1_COLS = [
+  'NIK','Nama','Departemen','Jabatan','Status',
+  'Total Bruto','Bi Jabatan','Bi JHT','Total Netto',
+  'PTKP','PKP','Penghasilan Kena Pajak Setahun',
+  'PPh 21 masa sebelumnya','PPh kurang bayar','Koreksi Pph 21','Total Pph 21'
+];
+
+// ---------- Persistence ----------
+function saveStorage(){ localStorage.setItem(LS_KEY, JSON.stringify({karyawan,rekapanData,pphData})); }
+function loadStorage(){ const raw = localStorage.getItem(LS_KEY); if(!raw) return false; try{ const d=JSON.parse(raw); karyawan = d.karyawan||[]; rekapanData = d.rekapanData||{}; pphData = d.pphData||{}; MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; }); return true;}catch(e){console.warn(e); return false;} }
+
+// ---------- Karyawan UI ----------
+function showTab(name){
+  $('#karyawan').style.display = (name==='karyawan')? 'block':'none';
+  $('#rekapan').style.display  = (name==='rekapan')? 'block':'none';
+  $('#pph21').style.display    = (name==='pph21')? 'block':'none';
+
+  $('#tabKaryawanBtn').classList.toggle('active', name==='karyawan');
+  $('#tabRekapanBtn').classList.toggle('active', name==='rekapan');
+  $('#tabPphBtn').classList.toggle('active', name==='pph21');
+}
+function initMonthDropdown(){
+  const sel = $('#bulanBerjalan'); sel.innerHTML='';
+  const year = new Date().getFullYear();
+  MONTH_LABELS.forEach((lab,i)=>{
+    const opt = document.createElement('option');
+    opt.value = `${year}-${String(i+1).padStart(2,'0')}`;
+    opt.textContent = `${lab} ${year}`;
+    if(i === new Date().getMonth()) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderKaryawan(){
+  const tbody = $('#tblKaryawan tbody'); tbody.innerHTML='';
+  karyawan.forEach((k, idx)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" data-idx="${idx}" ${k._sel? 'checked':''}></td>
+      <td contenteditable data-field="nik">${k.nik||''}</td>
+      <td contenteditable data-field="nama">${k.nama||''}</td>
+      <td contenteditable data-field="departemen">${k.departemen||''}</td>
+      <td contenteditable data-field="bagian">${k.bagian||''}</td>
+      <td contenteditable data-field="jabatan">${k.jabatan||''}</td>
+      <td contenteditable data-field="start">${k.start||''}</td>
+      <td contenteditable data-field="finish">${k.finish||''}</td>
+      <td contenteditable data-field="status">${k.status||''}</td>
+      <td contenteditable data-field="gender">${k.gender||''}</td>
+    `;
+    // checkbox toggle
+    tr.querySelector('input[type=checkbox]').onchange = function(){ k._sel = this.checked; }
+    // editable fields save on blur
+    tr.querySelectorAll('td[contenteditable]').forEach(td=> td.onblur = function(){ const f = this.dataset.field; k[f] = this.textContent.trim(); saveStorage(); updateAktifOut(); });
+    tbody.appendChild(tr);
+  });
+  
+  activateSearchBars();   // 🔎 aktifkan search setiap kali render
+}
+
+function addKaryawan(pref){
+  const obj = Object.assign({nik:'',nama:'',departemen:'',bagian:'',jabatan:'',start:'',finish:'',status:'',gender:'',_sel:false}, pref||{});
+  karyawan.push(obj); renderKaryawan(); updateAktifOut(); saveStorage();
+}
+function deleteSelectedKaryawan(){ karyawan = karyawan.filter(k=>!k._sel); renderKaryawan(); updateAktifOut(); saveStorage(); }
+
+// ---------- Rekapan UI ----------
+function buildRekapanSubtabs(){
+  const subs = $('#rekapanSubtabs'); subs.innerHTML='';
+  MONTH_LABELS.forEach((lab,i)=>{
+    const b = document.createElement('button'); b.textContent = lab; b.onclick = ()=> openRekapan(MONTHS[i], b);
+    subs.appendChild(b);
+  });
+  const bt = document.createElement('button'); bt.textContent = 'Total Tahun'; bt.onclick = ()=> openRekapan('total', bt); subs.appendChild(bt);
+}
+
+function openRekapan(month, btn){
+  $('#rekapanContainer').innerHTML = '';
+  $all('#rekapanSubtabs button').forEach(x=>x.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(month === 'total'){ renderRekapanTotal(); return; }
+  // container for month
+  const container = document.createElement('div');
+  // >>> tambahan tombol Import/Export untuk Rekapan
+  container.innerHTML = `<div class="controls">
+    <button class="btn" id="addActive_rek">+ Tambah Baris Aktif</button>
+    <button class="btn" id="addOut_rek">+ Tambah Baris Out</button>
+    <button class="btn" id="btnImportRek">📥 Import Rekapan</button>
+    <button class="btn" id="btnExportRek">📤 Export Rekapan</button>
+  </div>`;
+  // three tables: aktif, out, total (tambahkan kolom Aksi)
+  const headerRow = REK_COLS.map(h=>`<th>${h}</th>`).join('') + '<th>Aksi</th>';
+  const tableA = document.createElement('div'); tableA.innerHTML = `<h4>Rekapan - Aktif</h4><table class="rek-table akt" id="rek_${month}_akt"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  const tableO = document.createElement('div'); tableO.innerHTML = `<h4>Rekapan - Out</h4><table class="rek-table out" id="rek_${month}_out"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  const tableT = document.createElement('div'); tableT.innerHTML = `<h4>TOTAL (Aktif + Out)</h4><table class="rek-table tot" id="rek_${month}_tot"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  container.appendChild(tableA); container.appendChild(tableO); container.appendChild(tableT);
+  $('#rekapanContainer').appendChild(container);
+
+  // ensure data array exists
+  if(!rekapanData[month]) rekapanData[month] = [];
+
+  // wire add buttons
+  $('#addActive_rek').onclick = ()=> { addRekRow(month, 'aktif'); };
+  $('#addOut_rek').onclick = ()=> { addRekRow(month, 'out'); };
+
+  renderRekMonth(month);
+
+  // >>> aktifkan tombol Import/Export untuk Rekapan (menggunakan rekapanData[month])
+  document.getElementById("btnExportRek").onclick = ()=>{
+    // export rekapanData[month] (array of objects)
+    const data = (rekapanData[month]||[]).map(r => {
+      const out = {};
+      REK_COLS.forEach(c => out[c] = r[c] || '');
+      return out;
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekapan");
+    XLSX.writeFile(wb, `Rekapan_${month}.xlsx`);
+  };
+
+  document.getElementById("btnImportRek").onclick = ()=>{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls";
+    input.onchange = e=>{
+      const file = e.target.files[0];
+      importFromExcel(file, (rows)=>{
+        // rows is array of arrays (header included) — try to map header to REK_COLS
+        if(rows.length < 1){ alert('File kosong'); return; }
+        const header = rows[0].map(h=>String(h||'').trim());
+        // build mapping from header index to REK_COLS names
+        const mapped = [];
+        for(let r=1;r<rows.length;r++){
+          const row = rows[r];
+          if(row.every(c=>c===undefined||c==='')) continue; // skip empty
+          const obj = {};
+          REK_COLS.forEach(c=> obj[c]=''); // init
+          header.forEach((h, idx)=> {
+            const colIndex = REK_COLS.findIndex(rc=> rc.toLowerCase() === String(h).toLowerCase());
+            if(colIndex !== -1){
+              obj[REK_COLS[colIndex]] = row[idx]===undefined? '' : row[idx];
+            } else {
+              // try exact header match
+              if(REK_COLS.includes(h)) obj[h] = row[idx];
+            }
+          });
+          // convert numeric columns to numbers where possible
+          REK_COLS.forEach(c=>{
+            if(obj[c] !== '' && !isNaN(Number(String(obj[c]).toString().replace(/,/g,'')))){
+              obj[c] = Number(String(obj[c]).toString().replace(/,/g,''));
+            }
+          });
+          obj._status = 'aktif';
+          mapped.push(obj);
+        }
+        // replace rekapanData[month] with imported rows (you might want to merge instead)
+        // --- merge rekapan lama dengan yang baru ---
+if(!rekapanData[month]) rekapanData[month] = [];
+
+mapped.forEach(newRow=>{
+  const idx = rekapanData[month].findIndex(r=>r.NIK === newRow.NIK);
+  if(idx !== -1){
+    // update baris lama jika NIK sama
+    rekapanData[month][idx] = {...rekapanData[month][idx], ...newRow};
+  } else {
+    // tambahkan baris baru jika NIK belum ada
+    rekapanData[month].push(newRow);
+  }
+});
+
+saveStorage();
+renderRekMonth(month);
+
+// --- sinkronisasi otomatis ke PPh ---
+syncPphWithRekapan(month);
+renderPphMonth(month);
+
+alert('Import Rekapan selesai, data digabung (update jika NIK sama, tambah jika baru)');
+      });
+    };
+    input.click();
+  };
+}
+
+function addRekRow(month, which){
+  if(!rekapanData[month]) rekapanData[month]=[];
+  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', _status:which||'aktif' };
+  // add numeric columns init
+  for(let i=5;i<REK_COLS.length;i++) row[REK_COLS[i]] = 0;
+  rekapanData[month].push(row); saveStorage(); renderRekMonth(month);
+}
+
+function computeRekRowSums(r){
+  // Total Gaji = Tunj Gapok + Tunj Rapel + Tunj Lain2 + Tunj Pulsa + Pot Absen
+  let totalGaji = 0;
+  totalGaji += Number(r['Tunj Gapok']||0);
+  totalGaji += Number(r['Tunj Rapel']||0);
+  totalGaji += Number(r['Tunj Lain2']||0);
+  totalGaji += Number(r['Tunj Pulsa']||0);
+  totalGaji += Number(r['Pot Absen']||0);
+
+  // Total Allowance = Tunj Lembur + Tunj Pengobatan + Tunj Mkn + Tunj Transp +
+  //                   Tunj Sewa Kend + Komisi + Tunj Gratifikasi + Tunj Uniform
+  let totalAllow = 0;
+  totalAllow += Number(r['Tunj Lembur']||0);
+  totalAllow += Number(r['Tunj Pengobatan']||0);
+  totalAllow += Number(r['Tunj Mkn']||0);
+  totalAllow += Number(r['Tunj Transp']||0);
+  totalAllow += Number(r['Tunj Sewa Kend']||0);
+  totalAllow += Number(r['Komisi']||0);
+  totalAllow += Number(r['Tunj Gratifikasi']||0);
+  totalAllow += Number(r['Tunj Uniform']||0);
+
+  r['Total Gaji'] = Math.round(totalGaji);
+  r['Total Allowance'] = Math.round(totalAllow);
+}
+
+function renderRekMonth(month){
+  if(month==='total'){ renderRekapanTotal(); return; }
+  const rows = rekapanData[month]||[];
+  const aktifList = window._aktifList||[];
+  const outList = window._outList||[];
+  const activeRows = [], outRows = [];
+  rows.forEach(r=>{
+    if(r.NIK){
+      if(outList.find(x=>x.nik===r.NIK)) outRows.push(r);
+      else if(aktifList.find(x=>x.nik===r.NIK)) activeRows.push(r);
+      else (r._status==='out'? outRows.push(r) : activeRows.push(r));
+    } else (r._status==='out'? outRows.push(r) : activeRows.push(r));
+  });
+
+  function fillTable(tableId, rowsSet){
+    const tbody = document.querySelector('#'+tableId+' tbody');
+    if(!tbody) return;
+    tbody.innerHTML='';
+    rowsSet.forEach((r, idx)=>{
+      // compute sums before render
+      computeRekRowSums(r);
+      const tr = document.createElement('tr');
+      // Kolom NIK langsung editable (tanpa dropdown)
+      const tdNik = document.createElement('td');
+      tdNik.className = 'col-nik';
+      tdNik.contentEditable = true;
+      tdNik.textContent = r.NIK || '';
+      tdNik.onblur = function(){
+        r.NIK = this.textContent.trim();
+        const emp = (window._aktifList||[]).concat(window._outList||[]).find(p=>p.nik===r.NIK);
+        if(emp){
+          r.Nama = emp.nama;
+          r.Departemen = emp.departemen;
+          r.Bagian = emp.bagian;
+          r.Jabatan = emp.jabatan;
+        }
+        saveStorage();
+        renderRekMonth(month);
+      };
+      tr.appendChild(tdNik);
+      tr.appendChild(cellEditable(r,'Nama'));
+      tr.appendChild(cellEditable(r,'Departemen'));
+      tr.appendChild(cellEditable(r,'Bagian'));
+      tr.appendChild(cellEditable(r,'Jabatan'));
+      // numeric columns (starting index 5)
+      for(let i=5;i<REK_COLS.length;i++){
+        const col = REK_COLS[i];
+        const td = document.createElement('td');
+        if(col === 'Total Allowance' || col === 'Total Gaji'){
+          td.className = 'number'; td.textContent = formatNumber(r[col]||0);
+        } else {
+          td.contentEditable = true; td.className = 'number';
+          td.textContent = r[col] ? formatNumber(r[col]) : '';
+          td.onblur = function(){ r[col] = parseNumber(this.textContent||''); computeRekRowSums(r); saveStorage(); renderRekMonth(month); };
+        }
+        tr.appendChild(td);
+      }
+
+      // >>> tambahan kolom aksi (hapus per row, simpan per row, edit)
+      const tdAksi = document.createElement('td');
+      tdAksi.className = 'aksi-group';
+      const btnEdit = document.createElement('button'); btnEdit.className='btn btn-edit'; btnEdit.textContent='✏️';
+      const btnDel = document.createElement('button'); btnDel.className='btn btn-del'; btnDel.textContent='🗑';
+      const btnSave = document.createElement('button'); btnSave.className='btn btn-save'; btnSave.textContent='💾';
+      tdAksi.appendChild(btnEdit); tdAksi.appendChild(btnDel); tdAksi.appendChild(btnSave);
+
+      btnDel.onclick = ()=>{
+  const realIndex = rekapanData[month].indexOf(r);
+  if(realIndex !== -1){
+    if(confirm('Hapus baris ini?')) {
+      // Hapus dari Rekapan
+      rekapanData[month].splice(realIndex,1);
+
+      // Hapus juga dari PPh sesuai NIK
+      if(pphData[month]){
+        pphData[month] = pphData[month].filter(p => p.NIK !== r.NIK);
+      }
+
+      saveStorage();
+
+      // Refresh tampilan rekapan & pph
+      renderRekMonth(month);
+      syncPphWithRekapan(month);
+      renderPphMonth(month);
+    }
+  }
+};
+
+      btnSave.onclick = ()=>{
+        saveStorage(); alert('Baris disimpan');
+      };
+      btnEdit.onclick = ()=>{
+        // focus first editable cell in this row
+        const firstEditable = tr.querySelector('td[contenteditable]');
+        if(firstEditable) {
+          firstEditable.focus();
+          // move caret to end
+          const range = document.createRange();
+          range.selectNodeContents(firstEditable);
+          range.collapse(false);
+          const s = window.getSelection();
+          s.removeAllRanges();
+          s.addRange(range);
+        }
+      };
+
+      tr.appendChild(tdAksi);
+
+      tbody.appendChild(tr);
+    });
+    // footer totals
+    const tfoot = document.querySelector('#'+tableId+' tfoot tr.total-foot');
+    if(!tfoot) return;
+    tfoot.innerHTML = '';
+    const label = document.createElement('td'); label.colSpan = 5; label.textContent = 'TOTAL (bulan)'; tfoot.appendChild(label);
+    const sums = REK_COLS.slice(5).map(()=>0);
+    rowsSet.forEach(r=> REK_COLS.slice(5).forEach((c,i)=> sums[i] += Number(r[c]||0)));
+    sums.forEach(s=>{ const td=document.createElement('td'); td.className='number'; td.textContent = formatNumber(s); tfoot.appendChild(td); });
+    // add extra footer cell for aksi column
+    const tdEmpty = document.createElement('td'); tdEmpty.className='number'; tdEmpty.textContent=''; tfoot.appendChild(tdEmpty);
+  }
+  fillTable('rek_'+month+'_akt', activeRows);
+  fillTable('rek_'+month+'_out', outRows);	
+  fillTotalOnly('rek_'+month+'_tot', activeRows.concat(outRows));
+  // style mark out rows (visual), small delay so DOM exists
+  setTimeout(()=> markOutRowsInMonth(month), 50);
+}
+function fillTotalOnly(tableId, rowsSet){
+  const tfoot = document.querySelector('#'+tableId+' tfoot tr.total-foot');
+  if(!tfoot) return;
+  tfoot.innerHTML = '';
+  const label = document.createElement('td'); 
+  label.colSpan = 5; 
+  label.textContent = 'TOTAL (Aktif + Out)'; 
+  tfoot.appendChild(label);
+
+  const sums = REK_COLS.slice(5).map(()=>0);
+  rowsSet.forEach(r=> REK_COLS.slice(5).forEach((c,i)=> sums[i] += Number(r[c]||0)));
+  sums.forEach(s=>{
+    const td=document.createElement('td'); 
+    td.className='number'; 
+    td.textContent = formatNumber(s); 
+    tfoot.appendChild(td); 
+  });
+
+  // extra kosong buat kolom aksi
+  const tdEmpty = document.createElement('td'); 
+  tfoot.appendChild(tdEmpty);
+
+  // kosongkan tbody
+  const tbody = document.querySelector('#'+tableId+' tbody');
+  if(tbody) tbody.innerHTML = '';
+}
+// total year render for Rekapan
+function renderRekapanTotal(){
+  $('#rekapanContainer').innerHTML = '';
+  const table = document.createElement('table');
+  const header = ['NIK','Nama','Departemen','Jabatan'].concat(REK_COLS.slice(5));
+  table.innerHTML = '<thead><tr>'+ header.map(h=>`<th>${h}</th>`).join('') +'</tr></thead><tbody></tbody>';
+  $('#rekapanContainer').appendChild(document.createElement('h4')).textContent='Total Tahun Rekapan';
+  $('#rekapanContainer').appendChild(table);
+  const tbody = table.querySelector('tbody'); tbody.innerHTML='';
+  const map = {};
+  MONTHS.forEach(m=> (rekapanData[m]||[]).forEach(r=>{ if(!r.NIK) return; if(!map[r.NIK]) map[r.NIK] = {NIK:r.NIK, Nama:r.Nama, Departemen:r.Departemen, Jabatan:r.Jabatan, nums: REK_COLS.slice(5).map(()=>0)}; REK_COLS.slice(5).forEach((c,i)=> map[r.NIK].nums[i] += Number(r[c]||0)); }));
+  Object.keys(map).forEach(nik=>{ const v=map[nik]; const tr = document.createElement('tr'); tr.innerHTML = `<td>${v.NIK}</td><td>${v.Nama}</td><td>${v.Departemen}</td><td>${v.Jabatan}</td>` + v.nums.map(n=>`<td class="number">${formatNumber(n)}</td>`).join(''); tbody.appendChild(tr); });
+}
+
+// ---------- PPh UI ----------
+function buildPphSubtabs(){
+  const subs = $('#pphSubtabs'); subs.innerHTML='';
+  MONTH_LABELS.forEach((lab,i)=>{
+    const b = document.createElement('button');
+    b.textContent = lab;
+    b.onclick = ()=> openPph(MONTHS[i], b);
+    subs.appendChild(b);
+  });
+  const bt = document.createElement('button');
+  bt.textContent = 'Total Tahun';
+  bt.onclick = ()=> openPph('total', bt);
+  subs.appendChild(bt);
+
+  // tombol A1 Tahunan
+  const bA1 = document.createElement('button');
+  bA1.textContent = 'A1 Tahunan';
+  bA1.onclick = ()=> renderPphA1(bA1);
+  subs.appendChild(bA1);
+}
+
+function openPph(month, btn){
+  $('#pphContainer').innerHTML=''; $all('#pphSubtabs button').forEach(x=>x.classList.remove('active')); if(btn) btn.classList.add('active');
+  if(month === 'total'){ renderPphTotal(); return; }
+  const container = document.createElement('div');
+  container.innerHTML = `<div class="controls"><button class="btn" id="addActive_pph">+ Tambah Baris Aktif</button><button class="btn" id="addOut_pph">+ Tambah Baris Out</button></div>`;
+  const headerRow = PPH_COLS.map(h=>`<th>${h}</th>`).join('');
+  const tableA = document.createElement('div'); tableA.innerHTML = `<h4>PPh21 - Aktif</h4><table class="pph-table akt" id="pph_${month}_akt"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  const tableO = document.createElement('div'); tableO.innerHTML = `<h4>PPh21 - Out</h4><table class="pph-table out" id="pph_${month}_out"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  const tableT = document.createElement('div'); tableT.innerHTML = `<h4>TOTAL PPh21 (Aktif + Out)</h4><table class="pph-table tot" id="pph_${month}_tot"><thead><tr>${headerRow}</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>`;
+  container.appendChild(tableA); container.appendChild(tableO); container.appendChild(tableT);
+  $('#pphContainer').appendChild(container);
+
+  if(!pphData[month]) pphData[month] = [];
+
+  $('#addActive_pph').onclick = ()=> { addPphRow(month, 'aktif'); }
+  $('#addOut_pph').onclick = ()=> { addPphRow(month, 'out'); }
+
+  renderPphMonth(month);
+}
+
+function addPphRow(month, which){
+  if(!pphData[month]) pphData[month]=[];
+  const row = { NIK:'', Nama:'', Departemen:'', Jabatan:'', Status:'', PTKP:0, TER:'', Tarif:0, _status:which||'aktif' };
+  for(let i=5;i<PPH_COLS.length;i++) row[PPH_COLS[i]] = 0;
+  pphData[month].push(row); saveStorage(); renderPphMonth(month);
+}
+
+function syncPphFromRekapan(r, month){
+  if(!rekapanData[month]) return;
+  const rowRek = rekapanData[month].find(x => x.NIK === r.NIK);
+  if(!rowRek) return;
+
+  // Gaji Pokok dari Rekapan (sesuai logika Anda sebelumnya)
+  r['Gaji Pokok'] = Number(rowRek['Total Allowance']||0) 
+                  + Number(rowRek['Total Gaji']||0) 
+                  + Number(rowRek['Insurance']||0);
+	// Bonus+THR ambil dari Rekapan → Tunj THR
+  r['Bonus+THR'] = Number(rowRek['Tunj THR']||0);
+  // Iuran dari Rekapan (mengambil nama kolom yang ada di REK_COLS)
+  r['Iuran JKK 0,24%']   = Number(rowRek['Iuran JKK 0,24%']||0);
+  r['Iuran JKM 0,30%']   = Number(rowRek['Iuran JKM 0,30%']||0);
+  r['Iuran BPJS Kes 4%'] = Number(rowRek['BPJS Kes 4%']||0);
+}
+function syncPphWithRekapan(month){
+  if(!rekapanData[month]) return;
+  pphData[month] = []; // reset supaya sesuai rekapan
+  rekapanData[month].forEach(rr=>{
+    if(!rr.NIK) return;
+    const emp = (window._aktifList||[]).concat(window._outList||[]).find(e=>e.nik===rr.NIK);
+    const row = {
+      NIK: rr.NIK,
+      Nama: rr.Nama || (emp? emp.nama : ''),
+      Departemen: rr.Departemen || (emp? emp.departemen : ''),
+      Jabatan: rr.Jabatan || (emp? emp.jabatan : ''),
+      Status: emp? emp.status : '',
+      _status: rr._status || 'aktif'
+    };
+    // inisialisasi kolom numeric PPH
+    PPH_COLS.slice(5).forEach(c=> row[c]=0);
+    // ambil data otomatis dari rekapan
+    syncPphFromRekapan(row, month);
+    computePphRowTotal(row, month);
+    pphData[month].push(row);
+  });
+  saveStorage();
+}
+function computePphRowTotal(r, month){
+  if(month === 'a1'){ 
+    // Tahunan pakai progresif
+    const pkp = Number(r['PKP']||0);
+    r['PPh 21 Terutang'] = hitungProgresif(pkp);
+  } else {
+    // Bulanan (Jan–Nov) pakai Bruto × TER
+    const tarifPercent = Number(r.Tarif||0);
+    r['PPh 21 Terutang'] = Math.round(Number(r['Penghasilan Bruto']||0) * (tarifPercent/100));
+  }
+  // Kolom Tunj PPh21 selalu ikut PPh terutang
+  r['Tunj PPh21'] = r['PPh 21 Terutang'];
+
+  // ambil data otomatis dari Rekapan
+  syncPphFromRekapan(r, month);
+
+  let prev = 0;
+  for(let i=0; i<20; i++){ // maksimal 20 kali iterasi
+    let total = Number(r['Gaji Pokok']||0)
+              + Number(r['Lembur']||0)
+              + Number(r['Iuran JKK 0,24%']||0)
+              + Number(r['Iuran JKM 0,30%']||0)
+              + Number(r['Iuran BPJS Kes 4%']||0)
+              + Number(r['Tunj PPh21']||0);
+
+    r['Total Gaji+Lembur+pph21'] = Math.round(total);
+    r['Total Bruto'] = Math.round(total + Number(r['Bonus+THR']||0));
+
+    // Hitung tarif TER & PPh21
+    const tarif = getTarif(r.TER, r['Total Bruto']) || 0;
+    const pph = Math.round(r['Total Bruto'] * (tarif/100));
+
+    if(Math.abs(pph - prev) < 1){
+      r['PPh 21 Terutang'] = pph;
+      r['Tunj PPh21'] = pph;
+      break;
+    }
+
+    r['PPh 21 Terutang'] = pph;
+    r['Tunj PPh21'] = pph;
+    prev = pph;
+  }
+  // hitung total setelah koreksi
+  const koreksi = Number(r['Koreksi PPh21'] || 0);
+  r['Total PPh 21 Terutang'] = Math.round(Number(r['PPh 21 Terutang']||0) - koreksi);
+}
+
+function renderPphMonth(month){
+  if(month==='total'){ renderPphTotal(); return; }
+  const rows = pphData[month]||[];
+  const aktifList = window._aktifList||[]; 
+  const outList = window._outList||[];
+  const activeRows = [], outRows = [];
+
+  rows.forEach(r=>{
+    if(r.NIK){
+      if(outList.find(x=>x.nik===r.NIK)) outRows.push(r);
+      else if(aktifList.find(x=>x.nik===r.NIK)) activeRows.push(r);
+      else (r._status==='out'? outRows.push(r) : activeRows.push(r));
+    } else (r._status==='out'? outRows.push(r) : activeRows.push(r));
+  });
+
+  function fill(tableId, rowsSet){
+    const tbody = document.querySelector('#'+tableId+' tbody'); 
+    if(!tbody) return; 
+    tbody.innerHTML='';
+
+    rowsSet.forEach((r, idx)=>{
+      const tr = document.createElement('tr');
+      // Kolom NIK readonly (sinkron dari Rekapan)
+      const tdNik = document.createElement('td');
+      tdNik.className = 'col-nik';
+      tdNik.textContent = r.NIK || '';
+      tr.appendChild(tdNik);
+
+      tr.appendChild(cellEditable(r,'Nama'));
+      tr.appendChild(cellEditable(r,'Departemen'));
+      tr.appendChild(cellEditable(r,'Jabatan'));
+
+      // Status otomatis (non-editable cell)
+      const tdStatus = document.createElement('td');
+      tdStatus.textContent = r.Status || '';
+      tr.appendChild(tdStatus);
+
+      // numeric columns mulai dari index 5 (sesuai PPH_COLS)
+      for(let i=5;i<PPH_COLS.length;i++){
+  const col = PPH_COLS[i];
+  const td = document.createElement('td');
+
+  if(col === 'PTKP'){
+    r.PTKP = PTKP_MAP[r.Status] || 0;
+    td.className = 'number';
+    td.textContent = formatNumber(r.PTKP);
+  }
+  else if(col === 'TER'){
+    if(month === 'des'){
+      r.TER = '';
+      r.Tarif = 0;
+      td.textContent = '0%';
+    } else {
+      r.TER = getTER(r.Status);
+      td.textContent = r.TER;
+    }
+  }
+  else if(col === 'Tarif'){
+    computePphRowTotal(r, month);
+    if(month === 'des'){
+      r.Tarif = 0;
+    } else {
+      r.Tarif = getTarif(r.TER, Number(r['Total Bruto']||0)) || 0;
+    }
+    td.className = 'number';
+    td.textContent = (isFinite(r.Tarif) ? String(r.Tarif) : '0') + '%';
+  }
+  else if(col === 'PPh 21 Terutang'){
+    computePphRowTotal(r, month);
+    td.className = 'number';
+    td.textContent = formatNumber(r['PPh 21 Terutang']||0);
+  }
+  else if(col === 'Koreksi PPh21'){
+    td.contentEditable = true;
+    td.className = 'number';
+    td.textContent = r[col] ? formatNumber(r[col]) : '';
+    td.onblur = function(){
+      r[col] = parseNumber(this.textContent||'');
+      computePphRowTotal(r, month);
+      saveStorage();
+      renderPphMonth(month);
+    };
+  }
+  else if(col === 'Total PPh 21 Terutang'){
+    computePphRowTotal(r, month);
+    td.className = 'number';
+    td.textContent = formatNumber(r[col]||0);
+  }
+  else if(col === 'Total Gaji+Lembur+pph21'){
+    computePphRowTotal(r, month);
+    td.className='number';
+    td.textContent = formatNumber(r[col]||0);
+  }
+  else {
+    td.contentEditable = true;
+    td.className = 'number';
+    td.textContent = r[col] ? formatNumber(r[col]) : '';
+    td.onblur = function(){
+      r[col] = parseNumber(this.textContent||'');
+      computePphRowTotal(r, month);
+      saveStorage();
+      renderPphMonth(month);
+    };
+  }
+
+  tr.appendChild(td);
+}
+
+      tbody.appendChild(tr);
+    });
+
+    // footer totals
+    const tfoot = document.querySelector('#'+tableId+' tfoot tr.total-foot'); 
+    if(!tfoot) return; 
+    tfoot.innerHTML='';
+    const label = document.createElement('td'); label.colSpan = 5; label.textContent = 'TOTAL (bulan)'; tfoot.appendChild(label);
+
+    const sums = PPH_COLS.slice(5).map(()=>0);
+    rowsSet.forEach(r=> PPH_COLS.slice(5).forEach((c,i)=> sums[i] += Number(r[c]||0)));
+    sums.forEach(s=>{ const td=document.createElement('td'); td.className='number'; td.textContent = formatNumber(s); tfoot.appendChild(td); });
+  }
+
+  // render akt/out/tot (we preserve original grouping by status)
+  fill('pph_'+month+'_akt', activeRows);
+  fill('pph_'+month+'_out', outRows);
+  fillTotalOnlyPph('pph_'+month+'_tot', activeRows.concat(outRows));
+  setTimeout(()=> markOutRowsInMonth(month), 50);
+}
+function fillTotalOnlyPph(tableId, rowsSet){
+  const tfoot = document.querySelector('#'+tableId+' tfoot tr.total-foot');
+  if(!tfoot) return;
+  tfoot.innerHTML = '';
+  const label = document.createElement('td'); 
+  label.colSpan = 5; 
+  label.textContent = 'TOTAL PPh21 (Aktif + Out)'; 
+  tfoot.appendChild(label);
+
+  const sums = PPH_COLS.slice(5).map(()=>0);
+  rowsSet.forEach(r=> PPH_COLS.slice(5).forEach((c,i)=> sums[i] += Number(r[c]||0)));
+  sums.forEach(s=>{
+    const td=document.createElement('td'); 
+    td.className='number'; 
+    td.textContent = formatNumber(s); 
+    tfoot.appendChild(td); 
+  });
+
+  // kosongkan tbody
+  const tbody = document.querySelector('#'+tableId+' tbody');
+  if(tbody) tbody.innerHTML = '';
+}
+// render total year for PPh
+function renderPphTotal(){
+  $('#pphContainer').innerHTML = '';
+  const table = document.createElement('table'); const header = ['NIK','Nama','Departemen','Jabatan'].concat(PPH_COLS.slice(5));
+  table.innerHTML = '<thead><tr>'+ header.map(h=>`<th>${h}</th>`).join('') +'</tr></thead><tbody></tbody>';
+  $('#pphContainer').appendChild(document.createElement('h4')).textContent='Total Tahun PPh21';
+  $('#pphContainer').appendChild(table);
+  const tbody = table.querySelector('tbody'); tbody.innerHTML='';
+  const map = {};
+  MONTHS.forEach(m=> (pphData[m]||[]).forEach(r=>{ if(!r.NIK) return; if(!map[r.NIK]) map[r.NIK] = {NIK:r.NIK, Nama:r.Nama, Departemen:r.Departemen, Jabatan:r.Jabatan, nums: PPH_COLS.slice(5).map(()=>0)}; PPH_COLS.slice(5).forEach((c,i)=> map[r.NIK].nums[i] += Number(r[c]||0)); }));
+  Object.keys(map).forEach(nik=>{ const v=map[nik]; const tr=document.createElement('tr'); tr.innerHTML = `<td>${v.NIK}</td><td>${v.Nama}</td><td>${v.Departemen}</td><td>${v.Jabatan}</td>` + v.nums.map(n=>`<td class="number">${formatNumber(n)}</td>`).join(''); tbody.appendChild(tr); });
+}
+// ---------- Hitung progresif (Pasal 17) ----------
+// ---------- Hitung progresif (Pasal 17) ----------
+// helper: parsing angka yang toleran (bisa string "1.234.567" atau number)
+function toNum(x){
+  if (x === null || x === undefined || x === '') return 0;
+  if (typeof x === 'number') return Math.round(x);
+  // remove thousand separators (dot or space), remove commas, keep digits only
+  const s = String(x).replace(/\./g,'').replace(/,/g,'').replace(/\s+/g,'').trim();
+  const n = Number(s);
+  return isNaN(n) ? 0 : Math.round(n);
+}
+
+// ---------- Hitung progresif (Pasal 17) ----------
+function hitungProgresif(pkp){
+  let pajak = 0;
+
+  if (pkp <= 0) return 0;
+
+  // Lapisan 1: s.d. 60 jt
+  if (pkp > 60000000) {
+    pajak += 60000000 * 0.05;
+  } else {
+    pajak += pkp * 0.05;
+    return Math.round(pajak);
+  }
+
+  // Lapisan 2: 60 jt - 250 jt
+  if (pkp > 250000000) {
+    pajak += (250000000 - 60000000) * 0.15;
+  } else {
+    pajak += (pkp - 60000000) * 0.15;
+    return Math.round(pajak);
+  }
+
+  // Lapisan 3: 250 jt - 500 jt
+  if (pkp > 500000000) {
+    pajak += (500000000 - 250000000) * 0.25;
+  } else {
+    pajak += (pkp - 250000000) * 0.25;
+    return Math.round(pajak);
+  }
+
+  // Lapisan 4: 500 jt - 5 M
+  if (pkp > 5000000000) {
+    pajak += (5000000000 - 500000000) * 0.30;
+  } else {
+    pajak += (pkp - 500000000) * 0.30;
+    return Math.round(pajak);
+  }
+
+  // Lapisan 5: > 5 M
+  pajak += (pkp - 5000000000) * 0.35;
+
+  return Math.round(pajak);
+}
+
+// ---------- Render sub A1 Tahunan (robust) ----------
+// ---------- Render sub A1 Tahunan (final, dengan debug) ----------
+
+
+// ---------- Render sub A1 Tahunan ----------
+
+
+// ---------- Render A1 ----------
+
+// ---------- Helpers ----------
+function cellFromElement(el){ const td=document.createElement('td'); td.appendChild(el); return td; }
+function cellEditable(obj, field){ const td = document.createElement('td'); td.contentEditable = true; td.textContent = obj[field]||''; td.onblur = function(){ obj[field] = this.textContent.trim(); }; return td; }
+function markOutRowsInMonth(month){ const outN = (window._outList||[]).map(x=>x.nik); $all(`#rek_${month}_akt tbody tr, #rek_${month}_out tbody tr, #pph_${month}_akt tbody tr, #pph_${month}_out tbody tr`).forEach(tr=>{ const sel = tr.querySelector('select.nikselect'); const nik = sel ? sel.value : (tr.cells[0] && tr.cells[0].textContent.trim()); if(nik && outN.includes(nik)) tr.classList.add('out-row'); else tr.classList.remove('out-row'); }); }
+function refreshAllMonths(){ MONTHS.forEach(m=>{ renderRekMonth(m); renderPphMonth(m); }); }
+
+// >>> tambahan fungsi Import/Export Excel (umum)
+function importFromExcel(file, callback){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, {type:'array'});
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(firstSheet, {header:1});
+    callback(rows);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// >>> tambahan export untuk Karyawan (gunakan JSON -> sheet)
+function exportKaryawanToExcel(){
+  const data = karyawan.map(k=>({
+    NIK: k.nik||'', Nama: k.nama||'', Departemen: k.departemen||'', Bagian: k.bagian||'', Jabatan: k.jabatan||'', Start: k.start||'', Finish: k.finish||'', Status: k.status||'', Gender: k.gender||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Karyawan");
+  XLSX.writeFile(wb, `Karyawan.xlsx`);
+}
+
+// >>> tambahan import untuk Karyawan
+function importKaryawanFromExcel(file){
+  importFromExcel(file, (rows)=>{
+    if(rows.length < 1){ alert('File kosong'); return; }
+    const header = rows[0].map(h=>String(h||'').trim());
+    const mapped = [];
+    for(let r=1;r<rows.length;r++){
+      const row = rows[r];
+      if(row.every(c=>c===undefined||c==='')) continue;
+      const obj = {nik:'',nama:'',departemen:'',bagian:'',jabatan:'',start:'',finish:'',status:'',gender:'',_sel:false};
+      header.forEach((h, idx)=>{
+        const key = String(h||'').toLowerCase();
+        const val = row[idx]===undefined? '' : row[idx];
+        if(key.includes('nik')) obj.nik = val;
+        else if(key.includes('nama')) obj.nama = val;
+        else if(key.includes('depart')) obj.departemen = val;
+        else if(key.includes('bagian')) obj.bagian = val;
+        else if(key.includes('jabatan')) obj.jabatan = val;
+        else if(key.includes('start')) obj.start = val;
+        else if(key.includes('finish')) obj.finish = val;
+        else if(key.includes('status')) obj.status = val;
+        else if(key.includes('gender') || key.includes('l/p')) obj.gender = val;
+      });
+      mapped.push(obj);
+    }
+    // replace karyawan list (you could merge instead)
+    karyawan = mapped;
+    saveStorage();
+    renderKaryawan();
+    updateAktifOut();
+    alert('Import Karyawan selesai');
+  });
+}
+
+// ---------- Init ----------
+function init(){
+  initMonthDropdown();
+  // wire tabs
+  $('#tabKaryawanBtn').onclick = ()=> showTab('karyawan');
+  $('#tabRekapanBtn').onclick = ()=> showTab('rekapan');
+  $('#tabPphBtn').onclick = ()=> showTab('pph21');
+  // save/load
+  $('#btnSave').onclick = ()=> { saveStorage(); alert('Tersimpan di localStorage'); };
+  $('#btnLoad').onclick = ()=> { if(loadStorage()){ renderAll(); alert('Data dimuat'); } else alert('Tidak ada data di localStorage'); };
+  // karyawan controls
+  $('#addKaryawan').onclick = ()=> addKaryawan();
+  $('#delKaryawan').onclick = ()=> deleteSelectedKaryawan();
+  $('#updateStatus').onclick = ()=> { updateAktifOut(); saveStorage(); alert('Status diperbarui'); };
+
+  // >>> aktifkan tombol import/export karyawan
+  $('#btnExportKaryawan').onclick = ()=> { exportKaryawanToExcel(); };
+  $('#btnImportKaryawan').onclick = ()=>{
+    const input = document.createElement('input');
+    input.type = "file"; input.accept = ".xlsx,.xls";
+    input.onchange = e=>{
+      const file = e.target.files[0];
+      importKaryawanFromExcel(file);
+    };
+    input.click();
+  };
+
+  // ensure arrays exist
+  MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
+  // load existing or seed
+  if(!loadStorage()){
+    const yr = new Date().getFullYear();
+    addKaryawan({nik:'1001',nama:'Andi',departemen:'Finance',bagian:'Accounting',jabatan:'Staff',start:`${yr}-01`,status:'TK/0',gender:'L'});
+    addKaryawan({nik:'1002',nama:'Budi',departemen:'Sales',bagian:'Marketing',jabatan:'Staff',start:`${yr}-02`,status:'K/0',gender:'L'});
+    saveStorage();
+  } else {
+    renderAll();
+  }
+  // build subtabs
+  buildRekapanSubtabs();
+  buildPphSubtabs();
+  // render initial
+  renderKaryawan();
+  renderAll();
+  showTab('karyawan');
+  // open january by default in subtab UIs
+  const rkButtons = document.querySelectorAll('#rekapanSubtabs button'); if(rkButtons[0]) rkButtons[0].click();
+  const phButtons = document.querySelectorAll('#pphSubtabs button'); if(phButtons[0]) phButtons[0].click();
+}
+
+function renderAll(){ renderKaryawan(); MONTHS.forEach(m=>{ renderRekMonth(m); renderPphMonth(m); }); updateAktifOut(); }
+// Navigasi TAB antar kolom (semua kolom bisa Tab ke kanan)
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Tab'){
+    const td = e.target.closest('td[contenteditable]');
+    if(td){
+      e.preventDefault();
+      let next = td.nextElementSibling;
+      // cari cell berikut yang bisa di-edit
+      while(next && !next.hasAttribute('contenteditable')) {
+        next = next.nextElementSibling;
+      }
+      if(next){
+        next.focus();
+        // pindah cursor ke akhir teks
+        const range = document.createRange();
+        range.selectNodeContents(next);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  }
+});
+// >>> tambahan fungsi updateAktifOut
+function updateAktifOut(){
+  const tahun = document.getElementById('tahunBerjalan').value;   // ambil tahun dari input manual
+  const bulanSel = document.getElementById('bulanBerjalan').value; // ambil bulan (01–12)
+  const cur = new Date(`${tahun}-${bulanSel}-01`);  // gabungkan tahun+bulan
+
+  const aktif = [], out = [];
+  karyawan.forEach(k=>{
+    if(!k.start) return;
+    const start = new Date(k.start+'-01');
+    const finish = k.finish ? new Date(k.finish+'-01'): null;
+
+    // 🚩 logika: karyawan out kalau finish <= bulan berjalan
+    if(finish && finish <= cur) out.push(k);
+    else if(start <= cur) aktif.push(k);
+  });
+
+  window._aktifList = aktif;
+  window._outList = out;
+
+  // render tabel samping
+  const tbAktif = $('#tblAktif tbody'); tbAktif.innerHTML='';
+  aktif.forEach(k=>{
+    const tr=document.createElement('tr'); 
+    tr.innerHTML=`<td>${k.nik}</td><td>${k.nama}</td><td>${k.departemen}</td><td>${k.jabatan}</td>`; 
+    tbAktif.appendChild(tr); 
+  });
+
+  const tbOut = $('#tblOut tbody'); tbOut.innerHTML='';
+  out.forEach(k=>{
+    const tr=document.createElement('tr'); 
+    tr.innerHTML=`<td>${k.nik}</td><td>${k.nama}</td><td>${k.departemen}</td><td>${k.jabatan}</td><td>${k.finish}</td>`; 
+    tbOut.appendChild(tr); 
+  });
+}
+function gantiTahun(){
+  const tahun = document.getElementById('tahunBerjalan').value;
+  localStorage.setItem('tahun_terpilih', tahun);
+  updateAktifOut();
+  renderAll();
+}
+
+function gantiBulan(){
+  const bulan = document.getElementById('bulanBerjalan').value;
+  localStorage.setItem('bulan_terpilih', bulan);
+  updateAktifOut();
+  renderAll();
+}
+init();
+
+
+function renderPphA1(btn){
+  $('#pphContainer').innerHTML='';
+  $all('#pphSubtabs button').forEach(x=>x.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  const cols = [
+    'NIK','Nama','Departemen','Jabatan','Status',
+    'Total Bruto','Bi Jabatan','Bi JHT','Total Netto','PTKP','PKP','Penghasilan Kena Pajak Setahun',
+    'PPh 21 masa sebelumnya','PPh kurang bayar','Koreksi PPh21','Total Pph 21'
+  ];
+
+  // --- agregasi per NIK dari semua bulan ---
+  const map = {};
+  MONTHS.forEach(m=> (pphData[m]||[]).forEach(r=>{
+    if(!r.NIK) return;
+    if(!map[r.NIK]) map[r.NIK] = {
+      NIK: r.NIK, Nama: r.Nama||'', Departemen: r.Departemen||'', Jabatan: r.Jabatan||'', Status: r.Status||'',
+      bruto: 0, pphSebelum: 0
+    };
+    map[r.NIK].bruto += Number(r['Total Bruto']||0);
+  
+  }));
+
+  // total Bi JHT setahun (JHT2% + JP1%)
+  const biJhtMap = {};
+  MONTHS.forEach(m=>{
+    (rekapanData[m]||[]).forEach(rr=>{
+      if(!rr.NIK) return;
+      if(!biJhtMap[rr.NIK]) biJhtMap[rr.NIK] = 0;
+      biJhtMap[rr.NIK] += Number(rr['Iuran JHT 2%']||0) + Number(rr['Iuran JP 1%']||0);
+    });
+  });
+  const totalKoreksiMap = {};
+  if (Array.isArray(pphData['Total Tahun']) && pphData['Total Tahun'].length) {
+    pphData['Total Tahun'].forEach(r=>{
+      if (!r || !r.NIK) return;
+      totalKoreksiMap[r.NIK] = Number(r['Koreksi PPh21']||0);
+    });
+  } else {
+    MONTHS.forEach(m=> (pphData[m]||[]).forEach(r=>{
+      if (!r || !r.NIK) return;
+      totalKoreksiMap[r.NIK] = (totalKoreksiMap[r.NIK]||0) + Number(r['Koreksi PPh21']||0);
+    }));
+  }
+// --- ambil data PPh21 masa sebelumnya dari tab Sub Total Tahun ---
+const totalYearMap = {};
+MONTHS.forEach(m=>{
+  (pphData[m]||[]).forEach(r=>{
+    if(!r.NIK) return;
+    if(!totalYearMap[r.NIK]) totalYearMap[r.NIK] = 0;
+    totalYearMap[r.NIK] += Number(r['PPh 21 Terutang']||0);
+  });
+});
+
+// timpa nilai pphSebelum dengan hasil dari Sub Total Tahun
+Object.keys(map).forEach(nik=>{
+  map[nik].pphSebelum = Math.round(totalYearMap[nik]||0);
+});
+  if(!pphData._a1Koreksi) pphData._a1Koreksi = {};
+
+  const aktifList = window._aktifList || [];
+  const outList   = window._outList || [];
+  const aktifRows = [], outRows = [];
+
+  Object.values(map).forEach(v=>{
+    if(outList.find(o=>o.nik===v.NIK)) outRows.push(v);
+    else aktifRows.push(v);
+  });
+
+  function renderA1Table(rows, title){
+    const table = document.createElement('table');
+    table.innerHTML='<thead><tr>'+cols.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody></tbody><tfoot><tr class="total-foot"></tr></tfoot>';
+    $('#pphContainer').appendChild(document.createElement('h4')).textContent=title;
+    $('#pphContainer').appendChild(table);
+
+    const tbody = table.querySelector('tbody');
+    const sums = cols.map(()=>0);
+
+    rows.forEach(r=>{
+      const bruto = Math.round(r.bruto);
+      const biJabatan = Math.min(Math.round(bruto*0.05),6000000);
+      const biJht = Math.round(biJhtMap[r.NIK]||0);
+      const netto = bruto - biJabatan - biJht;
+      const ptkp = PTKP_MAP[r.Status]||0;
+      const pkp = Math.max(0, netto-ptkp);
+      const pphSetahun = hitungProgresif(pkp);
+      const pphSebelum = Math.round(r.pphSebelum||0);
+      const kurangBayar = hitungProgresif(pkp);   // ✅ langsung PKP × tarif progresif
+      const koreksi = Math.round(totalKoreksiMap[r.NIK] || 0);
+      const totalPph = kurangBayar - pphSebelum + koreksi;
+
+      const rowVals = [
+        r.NIK,r.Nama,r.Departemen,r.Jabatan,r.Status,
+        bruto,biJabatan,biJht,netto,ptkp,pkp,pkp,
+        pphSebelum,kurangBayar,koreksi,totalPph
+      ];
+
+      const tr = document.createElement('tr');
+      rowVals.forEach((val,i)=>{
+        const td=document.createElement('td');
+        if(i>=5){ td.className='number'; td.textContent=formatNumber(val); sums[i]+=Number(val)||0; }
+        else td.textContent=val;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    const tfoot = table.querySelector('tfoot tr.total-foot');
+    sums.forEach((s,i)=>{
+      const td=document.createElement('td');
+      if(i===0) td.textContent='TOTAL';
+      else if(i<5) td.textContent='';
+      else { td.className='number'; td.textContent=formatNumber(s); }
+      tfoot.appendChild(td);
+    });
+  }
+
+  renderA1Table(aktifRows,"Sub A1 – Tahunan (Aktif)");
+  renderA1Table(outRows,"Sub A1 – Tahunan (Out)");
+}
+function initYearAndMonth(){
+  const tahunInput = document.getElementById('tahunBerjalan');
+  const bulanSelect = document.getElementById('bulanBerjalan');
+  
+  // ambil tahun tersimpan atau default tahun sekarang
+  const savedYear = localStorage.getItem('tahun_terpilih') || new Date().getFullYear();
+  tahunInput.value = savedYear;
+
+  // isi bulan sesuai tahun
+  isiBulan(savedYear);
+
+  // set bulan tersimpan atau default bulan sekarang
+  const savedMonth = localStorage.getItem('bulan_terpilih') || String(new Date().getMonth()+1).padStart(2,'0');
+  bulanSelect.value = savedMonth;
+
+  // event saat tahun diganti manual
+  tahunInput.addEventListener('change', ()=>{
+    const val = tahunInput.value || new Date().getFullYear();
+    localStorage.setItem('tahun_terpilih', val);
+    isiBulan(val);
+    location.reload();
+  });
+
+  // event saat bulan diganti
+  bulanSelect.addEventListener('change', ()=>{
+    localStorage.setItem('bulan_terpilih', bulanSelect.value);
+    location.reload();
+  });
+}
+
+function isiBulan(tahun){
+  const bulanSelect = document.getElementById('bulanBerjalan');
+  bulanSelect.innerHTML = '';
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  months.forEach((m,i)=>{
+    const opt = document.createElement('option');
+    opt.value = String(i+1).padStart(2,'0');
+    opt.textContent = m + ' ' + tahun;
+    bulanSelect.appendChild(opt);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', initYearAndMonth);
+</script>
+</body>
+</html>
