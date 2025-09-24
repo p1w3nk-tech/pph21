@@ -580,7 +580,7 @@ async function loadStorage(){
       });
       
       renderAll();
-      console.log('✅ Data dimuat dari localStorage');
+      console.log('✅ Muat dari Firebase');
       return true;
     }
     
@@ -1160,7 +1160,7 @@ function renderPphMonth(month){
 
       // Status otomatis (non-editable cell)
       const tdStatus = document.createElement('td');
-      tdStatus.textContent = r.status || '';
+      tdStatus.textContent = r.Status || '';
       tr.appendChild(tdStatus);
 
       // numeric columns mulai dari index 5 (sesuai PPH_COLS)
