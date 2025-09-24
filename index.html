@@ -97,56 +97,115 @@ table td:first-child {
 }
 </style>
 
-<!-- >>> tambahan untuk import/export Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Firebase App (modular SDK) -->
+<!-- ============ FIREBASE INIT (MODULE) ============ -->
 <script type="module">
-  // Import SDKs
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } 
+    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc } 
+    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD2l3M0T8vOOHplpJ5BV1WMu_U94Of3-Zs",
-  authDomain: "pph21-mnu.firebaseapp.com",
-  databaseURL: "https://pph21-mnu-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "pph21-mnu",
-  storageBucket: "pph21-mnu.firebasestorage.app",
-  messagingSenderId: "908256337266",
-  appId: "1:908256337266:web:05c8d7012c28a6e61111eb",
-  measurementId: "G-5E8PKZT9ZB"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyD2l3M0T8vOOHplpJ5BV1WMu_U94Of3-Zs",
+    authDomain: "pph21-mnu.firebaseapp.com",
+    databaseURL: "https://pph21-mnu-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "pph21-mnu",
+    storageBucket: "pph21-mnu.firebasestorage.app",
+    messagingSenderId: "908256337266",
+    appId: "1:908256337266:web:05c8d7012c28a6e61111eb",
+    measurementId: "G-5E8PKZT9ZB"
+  };
 
-  // Init Firebase
   const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // fungsi save
-  async function saveToFirebase(){
-    const data = {karyawan, rekapanData, pphData};
-    await setDoc(doc(db, "pph21", "data"), data);
-    alert("Data tersimpan di Firebase!");
+  window._firebase = { app, auth, db };
+  window.firebaseSignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
+  window.firebaseSignOut = () => signOut(auth);
+  window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
+  window.saveUserDoc = async (uid, payload, merge = true) => {
+    if(!uid) throw new Error('No uid provided');
+    return await setDoc(doc(db,'users',uid), payload, merge ? { merge:true } : undefined);
+  };
+  window.loadUserDoc = async (uid) => {
+    if(!uid) return null;
+    const snap = await getDoc(doc(db,'users',uid));
+    return snap.exists() ? snap.data() : null;
+  };
+
+
+// --------- Login/Logout Handling ----------
+(function attachAuthHandlers(){
+  const btnLogin = document.getElementById('btnLogin');
+  if(btnLogin){
+    btnLogin.addEventListener('click', async function(){
+      const email = document.getElementById('email').value;
+      const pass  = document.getElementById('password').value;
+      if(!email || !pass){ alert('Masukkan email & password'); return; }
+      try{
+        if(window.firebaseSignIn){
+          await window.firebaseSignIn(email, pass);
+        }
+      }catch(err){
+        alert('Login gagal: ' + err.message);
+      }
+    });
   }
 
-  // fungsi load
-  async function loadFromFirebase(){
-    const snap = await getDoc(doc(db, "pph21", "data"));
-    if(snap.exists()){
-      const d = snap.data();
-      karyawan = d.karyawan||[];
-      rekapanData = d.rekapanData||{};
-      pphData = d.pphData||{};
-      renderAll();
-      alert("Data dimuat dari Firebase!");
-    }
+  const btnLogout = document.getElementById('btnLogout');
+  if(btnLogout){
+    btnLogout.addEventListener('click', async ()=>{
+      try{
+        if(window.firebaseSignOut) await window.firebaseSignOut();
+      }catch(err){ console.error('Logout error', err); }
+    });
   }
 
-  // sambungkan ke tombol
-  window.saveToFirebase = saveToFirebase;
-  window.loadFromFirebase = loadFromFirebase;
+  if(window.firebaseOnAuthStateChanged){
+    window.firebaseOnAuthStateChanged(async (user) => {
+      const lp = document.getElementById('loginPanel');
+      const app = document.getElementById('mainApp');
+      if(user){
+        if(lp) lp.style.display = 'none';
+        if(app) app.style.display = 'block';
+        
+      } else {
+        if(lp) lp.style.display = 'block';
+        if(app) app.style.display = 'none';
+      }
+    });
+  }
+})();
+document.addEventListener("DOMContentLoaded", ()=>{
+  if(typeof init === "function"){
+    init();
+  }
+});
 </script>
+
+
+<!-- >>> tambahan untuk import/export Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
+<h1>Rekapan & Hitung PPh21 — Firebase Edition</h1>
+
+<!-- ===== LOGIN PANEL ===== -->
+<div id="loginPanel" style="padding:12px;border-radius:8px;background:#fff;margin-bottom:12px">
+  <h2 style="margin:0 0 8px">Login — PPh21 MNU</h2>
+  <form id="loginForm" onsubmit="return false;">
+    <input id="email" type="email" placeholder="Email" required style="padding:6px;width:280px;margin-right:8px">
+    <input id="password" type="password" placeholder="Password" required style="padding:6px;width:200px;margin-right:8px">
+    <button id="btnLogin" class="btn primary" type="button">Login</button>
+    <small style="display:block;margin-top:6px;color:#6b7280">Gunakan akun yang sudah dibuat di Firebase Console → Authentication → Users</small>
+  </form>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp" style="display:none">
+
 <h1>Rekapan & Hitung PPh21 — Final v10 (with TER, import/export)</h1>
 
 <div class="tabs">
@@ -156,8 +215,8 @@ const firebaseConfig = {
   <div style="flex:1"></div>
   <label>Tahun: <input type="number" id="tahunBerjalan" min="2000" max="2100" style="width:80px"></label>
 <label>Bulan: <select id="bulanBerjalan"></select></label>
-<button onclick="saveToFirebase()">💾 Simpan (Firebase)</button>
-<button onclick="loadFromFirebase()">📂 Muat (Firebase)</button>
+<button id="btnSave" class="btn primary">💾 Simpan</button>
+  <button id="btnLoad" class="btn">📂 Muat</button>
 </div>
 
 <div id="karyawan" class="panel">
@@ -431,8 +490,58 @@ const PPH_A1_COLS = [
 ];
 
 // ---------- Persistence ----------
-function saveStorage(){ localStorage.setItem(LS_KEY, JSON.stringify({karyawan,rekapanData,pphData})); }
-function loadStorage(){ const raw = localStorage.getItem(LS_KEY); if(!raw) return false; try{ const d=JSON.parse(raw); karyawan = d.karyawan||[]; rekapanData = d.rekapanData||{}; pphData = d.pphData||{}; MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; }); return true;}catch(e){console.warn(e); return false;} }
+
+// ---------- Firestore Save / Load ----------
+async function saveStorage(){
+  try{
+    const auth = window._firebase && window._firebase.auth;
+    if(!auth || !auth.currentUser){
+      localStorage.setItem(LS_KEY, JSON.stringify({karyawan,rekapanData,pphData}));
+      return;
+    }
+    const uid = auth.currentUser.uid;
+    await window.saveUserDoc(uid, { karyawan, rekapanData, pphData, updated: new Date() }, true);
+  }catch(err){
+    console.error('saveStorage error', err);
+    alert('Gagal menyimpan ke Firebase: ' + err.message);
+  }
+}
+
+async function loadStorage(){
+  try{
+    const auth = window._firebase && window._firebase.auth;
+    if(!auth || !auth.currentUser){
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return false;
+      try{
+        const d = JSON.parse(raw);
+        karyawan = d.karyawan || [];
+        rekapanData = d.rekapanData || {};
+        pphData = d.pphData || {};
+        MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+        renderAll();
+        return true;
+      }catch(e){ return false; }
+    }
+    const uid = auth.currentUser.uid;
+    const docData = await window.loadUserDoc(uid);
+    if(!docData) {
+      MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+      return false;
+    }
+    karyawan = docData.karyawan || [];
+    rekapanData = docData.rekapanData || {};
+    pphData = docData.pphData || {};
+    MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+    renderAll();
+    return true;
+  }catch(err){
+    console.error('loadStorage error', err);
+    alert('Gagal memuat data dari Firebase: ' + err.message);
+    return false;
+  }
+}
+; pphData = d.pphData||{}; MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
 
 // ---------- Karyawan UI ----------
 function showTab(name){
@@ -1256,11 +1365,7 @@ function init(){
     };
     input.click();
   };
-document.getElementById("btnRekapan").onclick = ()=>renderRekapan();
-  document.getElementById("btnPph21").onclick = ()=>renderPph21();
-  document.getElementById("btnA1").onclick = ()=>renderPphA1();
-}
-window.onload = init;
+
   // ensure arrays exist
   MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
   // load existing or seed
@@ -1523,6 +1628,12 @@ function isiBulan(tahun){
 }
 
 window.addEventListener('DOMContentLoaded', initYearAndMonth);
+document.addEventListener("DOMContentLoaded", ()=>{
+  if(typeof init === "function"){
+    init();
+  }
+});
 </script>
+</div>
 </body>
 </html>
