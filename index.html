@@ -1430,7 +1430,25 @@ function init(){
   $('#addKaryawan').onclick = ()=> addKaryawan();
   $('#delKaryawan').onclick = ()=> deleteSelectedKaryawan();
   $('#updateStatus').onclick = ()=> { updateAktifOut(); saveStorage(); alert('Status diperbarui'); };
-
+// Dalam fungsi init(), setelah loadStorage()
+if(loadStorage()){
+  // Debug: periksa struktur data
+  console.log('Jumlah karyawan:', karyawan.length);
+  console.log('Data karyawan:', karyawan);
+  
+  // Periksa apakah status ada di setiap karyawan
+  karyawan.forEach((k, i) => {
+    if (k.status === undefined) {
+      console.warn(`Karyawan ${i} (NIK: ${k.nik}) tidak memiliki status!`);
+      k.status = ''; // Set default value
+    }
+  });
+  
+  renderAll(); 
+  alert('Data dimuat');
+} else {
+  alert('Tidak ada data di localStorage');
+}
   // >>> aktifkan tombol import/export karyawan
   $('#btnExportKaryawan').onclick = ()=> { exportKaryawanToExcel(); };
   $('#btnImportKaryawan').onclick = ()=>{
