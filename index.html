@@ -794,7 +794,7 @@ alert('Import Rekapan selesai, data digabung (update jika NIK sama, tambah jika 
 
 function addRekRow(month, which){
   if(!rekapanData[month]) rekapanData[month]=[];
-  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', _status:which||'aktif' };
+  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', Status:''||'aktif' };
   // add numeric columns init
   for(let i=5;i<REK_COLS.length;i++) row[REK_COLS[i]] = 0;
   rekapanData[month].push(row); saveStorage(); renderRekMonth(month);
