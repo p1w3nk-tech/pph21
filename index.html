@@ -102,7 +102,7 @@ table td:first-child {
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } 
     from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc } 
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc } 
     from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -116,72 +116,114 @@ table td:first-child {
     measurementId: "G-5E8PKZT9ZB"
   };
 
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  window._firebase = { app, auth, db };
-  window.firebaseSignIn = (email, pass) => signInWithEmailAndPassword(auth, email, pass);
-  window.firebaseSignOut = () => signOut(auth);
-  window.firebaseOnAuthStateChanged = (cb) => onAuthStateChanged(auth, cb);
-  window.saveUserDoc = async (uid, payload, merge = true) => {
-    if(!uid) throw new Error('No uid provided');
-    return await setDoc(doc(db,'users',uid), payload, merge ? { merge:true } : undefined);
+  // Global functions untuk akses dari mana saja
+  window.firebaseApp = app;
+  window.firebaseAuth = auth;
+  window.firebaseDb = db;
+
+  // Simplified save function
+  window.saveToFirestore = async (collectionName, data) => {
+    try {
+      console.log('Menyimpan ke Firestore:', collectionName, data);
+      
+      // Simpan ke collection 'appData' dengan document ID berdasarkan tahun
+      const tahun = document.getElementById('tahunBerjalan')?.value || new Date().getFullYear();
+      const docRef = doc(db, 'appData', `tahun_${tahun}`);
+      
+      await setDoc(docRef, {
+        [collectionName]: data,
+        lastUpdated: new Date()
+      }, { merge: true });
+      
+      console.log('✅ Berhasil menyimpan ke Firestore');
+      return true;
+    } catch (error) {
+      console.error('❌ Error menyimpan ke Firestore:', error);
+      alert('Gagal menyimpan ke Firebase: ' + error.message);
+      return false;
+    }
   };
-  window.loadUserDoc = async (uid) => {
-    if(!uid) return null;
-    const snap = await getDoc(doc(db,'users',uid));
-    return snap.exists() ? snap.data() : null;
-  };
 
-
-// --------- Login/Logout Handling ----------
-(function attachAuthHandlers(){
-  const btnLogin = document.getElementById('btnLogin');
-  if(btnLogin){
-    btnLogin.addEventListener('click', async function(){
-      const email = document.getElementById('email').value;
-      const pass  = document.getElementById('password').value;
-      if(!email || !pass){ alert('Masukkan email & password'); return; }
-      try{
-        if(window.firebaseSignIn){
-          await window.firebaseSignIn(email, pass);
-        }
-      }catch(err){
-        alert('Login gagal: ' + err.message);
-      }
-    });
-  }
-
-  const btnLogout = document.getElementById('btnLogout');
-  if(btnLogout){
-    btnLogout.addEventListener('click', async ()=>{
-      try{
-        if(window.firebaseSignOut) await window.firebaseSignOut();
-      }catch(err){ console.error('Logout error', err); }
-    });
-  }
-
-  if(window.firebaseOnAuthStateChanged){
-    window.firebaseOnAuthStateChanged(async (user) => {
-      const lp = document.getElementById('loginPanel');
-      const app = document.getElementById('mainApp');
-      if(user){
-        if(lp) lp.style.display = 'none';
-        if(app) app.style.display = 'block';
-        
+  // Simplified load function
+  window.loadFromFirestore = async (collectionName) => {
+    try {
+      const tahun = document.getElementById('tahunBerjalan')?.value || new Date().getFullYear();
+      const docRef = doc(db, 'appData', `tahun_${tahun}`);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log('✅ Data loaded from Firestore:', data[collectionName]);
+        return data[collectionName] || null;
       } else {
-        if(lp) lp.style.display = 'block';
-        if(app) app.style.display = 'none';
+        console.log('❌ No document found');
+        return null;
       }
-    });
-  }
-})();
-document.addEventListener("DOMContentLoaded", ()=>{
-  if(typeof init === "function"){
-    init();
-  }
-});
+    } catch (error) {
+      console.error('❌ Error loading from Firestore:', error);
+      return null;
+    }
+  };
+
+  // Login/Logout handlers
+  window.firebaseSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
+  window.firebaseSignOut = () => signOut(auth);
+
+  // Auth state listener
+  onAuthStateChanged(auth, (user) => {
+    const loginPanel = document.getElementById('loginPanel');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (user) {
+      console.log('✅ User logged in:', user.email);
+      if (loginPanel) loginPanel.style.display = 'none';
+      if (mainApp) mainApp.style.display = 'block';
+    } else {
+      console.log('❌ User logged out');
+      if (loginPanel) loginPanel.style.display = 'block';
+      if (mainApp) mainApp.style.display = 'none';
+    }
+  });
+
+  // Login form handler
+  document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const btnLogin = document.getElementById('btnLogin');
+    
+    if (btnLogin) {
+      btnLogin.addEventListener('click', async function() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        if (!email || !password) {
+          alert('Masukkan email dan password');
+          return;
+        }
+        
+        try {
+          await window.firebaseSignIn(email, password);
+        } catch (error) {
+          alert('Login gagal: ' + error.message);
+        }
+      });
+    }
+    
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', async () => {
+        try {
+          await window.firebaseSignOut();
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
+      });
+    }
+  });
 </script>
 
 
@@ -491,57 +533,75 @@ const PPH_A1_COLS = [
 
 // ---------- Persistence ----------
 
-// ---------- Firestore Save / Load ----------
+// ---------- Persistence ----------
 async function saveStorage(){
-  try{
-    const auth = window._firebase && window._firebase.auth;
-    if(!auth || !auth.currentUser){
-      localStorage.setItem(LS_KEY, JSON.stringify({karyawan,rekapanData,pphData}));
-      return;
+  try {
+    const dataToSave = {
+      karyawan: karyawan,
+      rekapanData: rekapanData,
+      pphData: pphData,
+      savedAt: new Date().toISOString()
+    };
+    
+    // Coba simpan ke Firebase dulu
+    const firebaseSuccess = await window.saveToFirestore('pph21Data', dataToSave);
+    
+    if (!firebaseSuccess) {
+      // Fallback ke localStorage jika Firebase gagal
+      localStorage.setItem(LS_KEY, JSON.stringify(dataToSave));
+      console.log('✅ Data disimpan ke localStorage (fallback)');
     }
-    const uid = auth.currentUser.uid;
-    await window.saveUserDoc(uid, { karyawan, rekapanData, pphData, updated: new Date() }, true);
-  }catch(err){
-    console.error('saveStorage error', err);
-    alert('Gagal menyimpan ke Firebase: ' + err.message);
+    
+    alert('✅ Data berhasil disimpan');
+  } catch (error) {
+    console.error('Save error:', error);
+    // Fallback ke localStorage
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      karyawan: karyawan,
+      rekapanData: rekapanData,
+      pphData: pphData
+    }));
+    alert('⚠️ Data disimpan ke localStorage (Fallback)');
   }
 }
 
 async function loadStorage(){
-  try{
-    const auth = window._firebase && window._firebase.auth;
-    if(!auth || !auth.currentUser){
+  try {
+    // Coba load dari Firebase dulu
+    const firebaseData = await window.loadFromFirestore('pph21Data');
+    
+    if (firebaseData) {
+      karyawan = firebaseData.karyawan || [];
+      rekapanData = firebaseData.rekapanData || {};
+      pphData = firebaseData.pphData || {};
+      console.log('✅ Data loaded from Firebase');
+    } else {
+      // Fallback ke localStorage
       const raw = localStorage.getItem(LS_KEY);
-      if(!raw) return false;
-      try{
-        const d = JSON.parse(raw);
-        karyawan = d.karyawan || [];
-        rekapanData = d.rekapanData || {};
-        pphData = d.pphData || {};
-        MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
-        renderAll();
-        return true;
-      }catch(e){ return false; }
+      if (raw) {
+        const localData = JSON.parse(raw);
+        karyawan = localData.karyawan || [];
+        rekapanData = localData.rekapanData || {};
+        pphData = localData.pphData || {};
+        console.log('✅ Data loaded from localStorage');
+      }
     }
-    const uid = auth.currentUser.uid;
-    const docData = await window.loadUserDoc(uid);
-    if(!docData) {
-      MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
-      return false;
-    }
-    karyawan = docData.karyawan || [];
-    rekapanData = docData.rekapanData || {};
-    pphData = docData.pphData || {};
-    MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+    
+    // Initialize empty arrays for months
+    MONTHS.forEach(m => {
+      if (!rekapanData[m]) rekapanData[m] = [];
+      if (!pphData[m]) pphData[m] = [];
+    });
+    
     renderAll();
     return true;
-  }catch(err){
-    console.error('loadStorage error', err);
-    alert('Gagal memuat data dari Firebase: ' + err.message);
+  } catch (error) {
+    console.error('Load error:', error);
+    alert('Gagal memuat data');
     return false;
   }
 }
-; pphData = d.pphData||{}; MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
+
 
 // ---------- Karyawan UI ----------
 function showTab(name){
@@ -1626,7 +1686,27 @@ function isiBulan(tahun){
     bulanSelect.appendChild(opt);
   });
 }
+// Test koneksi Firebase - paste di browser console
+function testFirebase() {
+  const db = window.firebaseDb;
+  if (!db) {
+    console.error('❌ Firebase not initialized');
+    return;
+  }
+  
+  // Test write operation
+  const testRef = doc(db, 'test', 'connection_test');
+  setDoc(testRef, {
+    message: 'Test connection',
+    timestamp: new Date()
+  }).then(() => {
+    console.log('✅ Firebase connection successful');
+  }).catch(error => {
+    console.error('❌ Firebase connection failed:', error);
+  });
+}
 
+testFirebase();
 window.addEventListener('DOMContentLoaded', initYearAndMonth);
 document.addEventListener("DOMContentLoaded", ()=>{
   if(typeof init === "function"){
