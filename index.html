@@ -320,10 +320,10 @@ const PTKP_MAP = {
   'K/2' : 67500000,
   'K/3' : 72000000
 };
-function getTER(Status){
-  if(['TK/0','TK/1','K/0'].includes(Status)) return 'A';
-  if(['TK/2','TK/3','K/1','K/2'].includes(Status)) return 'B';
-  if(Status==='K/3') return 'C';
+function getTER(status){
+  if(['TK/0','TK/1','K/0'].includes(status)) return 'A';
+  if(['TK/2','TK/3','K/1','K/2'].includes(status)) return 'B';
+  if(status==='K/3') return 'C';
   return '';
 }
 
@@ -794,7 +794,7 @@ alert('Import Rekapan selesai, data digabung (update jika NIK sama, tambah jika 
 
 function addRekRow(month, which){
   if(!rekapanData[month]) rekapanData[month]=[];
-  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', _Status:which||'aktif' };
+  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', _status:which||'aktif' };
   // add numeric columns init
   for(let i=5;i<REK_COLS.length;i++) row[REK_COLS[i]] = 0;
   rekapanData[month].push(row); saveStorage(); renderRekMonth(month);
@@ -1035,7 +1035,7 @@ function openPph(month, btn){
 
 function addPphRow(month, which){
   if(!pphData[month]) pphData[month]=[];
-  const row = { NIK:'', Nama:'', Departemen:'', Jabatan:'', Status:'', PTKP:0, TER:'', Tarif:0, _Status:which||'aktif' };
+  const row = { NIK:'', Nama:'', Departemen:'', Jabatan:'', Status:'', PTKP:0, TER:'', Tarif:0, _status:which||'aktif' };
   for(let i=5;i<PPH_COLS.length;i++) row[PPH_COLS[i]] = 0;
   pphData[month].push(row); saveStorage(); renderPphMonth(month);
 }
@@ -1068,7 +1068,7 @@ function syncPphWithRekapan(month){
       Departemen: rr.Departemen || (emp? emp.departemen : ''),
       Jabatan: rr.Jabatan || (emp? emp.jabatan : ''),
       Status: emp? emp.status : '',
-      _Status: rr._status || 'aktif'
+      _status: rr._status || 'aktif'
     };
     // inisialisasi kolom numeric PPH
     PPH_COLS.slice(5).forEach(c=> row[c]=0);
@@ -1160,7 +1160,7 @@ function renderPphMonth(month){
 
       // Status otomatis (non-editable cell)
       const tdStatus = document.createElement('td');
-      tdStatus.textContent = r.Status || '';
+      tdStatus.textContent = r.status || '';
       tr.appendChild(tdStatus);
 
       // numeric columns mulai dari index 5 (sesuai PPH_COLS)
