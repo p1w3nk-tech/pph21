@@ -580,7 +580,7 @@ async function loadStorage(){
       });
       
       renderAll();
-      console.log('✅ Muat dari Firebase');
+      console.log('✅ Data dimuat dari localStorage');
       return true;
     }
     
@@ -794,7 +794,14 @@ alert('Import Rekapan selesai, data digabung (update jika NIK sama, tambah jika 
 
 function addRekRow(month, which){
   if(!rekapanData[month]) rekapanData[month]=[];
-  const row = { NIK:'', Nama:'', Departemen:'', Bagian:'', Jabatan:'', _status:which||'aktif' };
+  const row = {
+  NIK: rr.NIK,
+  Nama: rr.Nama || (emp? emp.nama : ''),
+  Departemen: rr.Departemen || (emp? emp.departemen : ''),
+  Jabatan: rr.Jabatan || (emp? emp.jabatan : ''),
+  Status: (emp && emp.status) ? emp.status.toUpperCase() : (rr.status ? rr.status.toUpperCase() : "IN"),
+  _status: rr._status || 'aktif'
+};
   // add numeric columns init
   for(let i=5;i<REK_COLS.length;i++) row[REK_COLS[i]] = 0;
   rekapanData[month].push(row); saveStorage(); renderRekMonth(month);
@@ -833,7 +840,7 @@ function renderRekMonth(month){
   const activeRows = [], outRows = [];
   rows.forEach(r=>{
     if(r.NIK){
-      if(outList.find(x=>x.nik===r.NIK)) outRows.push(r);
+      if(outList.find(x=>x.nik===r.NIK) || r.Status==="OUT") outRows.push(r);
       else if(aktifList.find(x=>x.nik===r.NIK)) activeRows.push(r);
       else (r._status==='out'? outRows.push(r) : activeRows.push(r));
     } else (r._status==='out'? outRows.push(r) : activeRows.push(r));
@@ -1135,7 +1142,7 @@ function renderPphMonth(month){
 
   rows.forEach(r=>{
     if(r.NIK){
-      if(outList.find(x=>x.nik===r.NIK)) outRows.push(r);
+      if(outList.find(x=>x.nik===r.NIK) || r.Status==="OUT") outRows.push(r);
       else if(aktifList.find(x=>x.nik===r.NIK)) activeRows.push(r);
       else (r._status==='out'? outRows.push(r) : activeRows.push(r));
     } else (r._status==='out'? outRows.push(r) : activeRows.push(r));
@@ -1160,8 +1167,8 @@ function renderPphMonth(month){
 
       // Status otomatis (non-editable cell)
       const tdStatus = document.createElement('td');
-      tdStatus.textContent = r.Status || '';
-      tr.appendChild(tdStatus);
+tdStatus.textContent = r.Status || "IN";
+tr.appendChild(tdStatus);
 
       // numeric columns mulai dari index 5 (sesuai PPH_COLS)
       for(let i=5;i<PPH_COLS.length;i++){
@@ -1430,25 +1437,7 @@ function init(){
   $('#addKaryawan').onclick = ()=> addKaryawan();
   $('#delKaryawan').onclick = ()=> deleteSelectedKaryawan();
   $('#updateStatus').onclick = ()=> { updateAktifOut(); saveStorage(); alert('Status diperbarui'); };
-// Dalam fungsi init(), setelah loadStorage()
-if(loadStorage()){
-  // Debug: periksa struktur data
-  console.log('Jumlah karyawan:', karyawan.length);
-  console.log('Data karyawan:', karyawan);
-  
-  // Periksa apakah status ada di setiap karyawan
-  karyawan.forEach((k, i) => {
-    if (k.status === undefined) {
-      console.warn(`Karyawan ${i} (NIK: ${k.nik}) tidak memiliki status!`);
-      k.status = ''; // Set default value
-    }
-  });
-  
-  renderAll(); 
-  alert('Data dimuat');
-} else {
-  alert('Tidak ada data di localStorage');
-}
+
   // >>> aktifkan tombol import/export karyawan
   $('#btnExportKaryawan').onclick = ()=> { exportKaryawanToExcel(); };
   $('#btnImportKaryawan').onclick = ()=>{
