@@ -492,56 +492,133 @@ const PPH_A1_COLS = [
 // ---------- Persistence ----------
 
 // ---------- Firestore Save / Load ----------
+// ---------- Persistence ----------
 async function saveStorage(){
   try{
     const auth = window._firebase && window._firebase.auth;
+    
+    console.log('💾 Memulai penyimpanan...');
+    console.log('Auth status:', auth);
+    console.log('Current user:', auth?.currentUser);
+    
     if(!auth || !auth.currentUser){
-      localStorage.setItem(LS_KEY, JSON.stringify({karyawan,rekapanData,pphData}));
+      console.log('⚠️ Simpan ke localStorage (belum login)');
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        karyawan: karyawan,
+        rekapanData: rekapanData,
+        pphData: pphData,
+        savedAt: new Date().toISOString(),
+        savedTo: 'localStorage'
+      }));
+      alert('💾 Data disimpan ke localStorage (Silakan login untuk simpan ke Firebase)');
       return;
     }
+    
+    console.log('✅ Simpan ke Firebase');
     const uid = auth.currentUser.uid;
-    await window.saveUserDoc(uid, { karyawan, rekapanData, pphData, updated: new Date() }, true);
+    await window.saveUserDoc(uid, { 
+      karyawan: karyawan, 
+      rekapanData: rekapanData, 
+      pphData: pphData, 
+      updated: new Date(),
+      updatedBy: auth.currentUser.email
+    }, true);
+    
+    // Juga simpan ke localStorage sebagai backup
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      karyawan: karyawan,
+      rekapanData: rekapanData,
+      pphData: pphData,
+      savedAt: new Date().toISOString(),
+      savedTo: 'firebase'
+    }));
+    
+    alert('✅ Data berhasil disimpan ke Firebase!');
+    
   }catch(err){
     console.error('saveStorage error', err);
-    alert('Gagal menyimpan ke Firebase: ' + err.message);
+    // Fallback ke localStorage
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      karyawan: karyawan,
+      rekapanData: rekapanData,
+      pphData: pphData,
+      savedAt: new Date().toISOString(),
+      savedTo: 'localStorage (error fallback)',
+      error: err.message
+    }));
+    alert('⚠️ Data disimpan ke localStorage (Error: ' + err.message + ')');
   }
 }
 
 async function loadStorage(){
   try{
     const auth = window._firebase && window._firebase.auth;
+    
+    console.log('📂 Memuat data...');
+    console.log('Auth status:', auth);
+    console.log('Current user:', auth?.currentUser);
+    
+    // Jika tidak login, gunakan localStorage
     if(!auth || !auth.currentUser){
+      console.log('⚠️ Muat dari localStorage (belum login)');
       const raw = localStorage.getItem(LS_KEY);
-      if(!raw) return false;
-      try{
-        const d = JSON.parse(raw);
-        karyawan = d.karyawan || [];
-        rekapanData = d.rekapanData || {};
-        pphData = d.pphData || {};
-        MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
-        renderAll();
-        return true;
-      }catch(e){ return false; }
+      if(!raw) {
+        console.log('❌ Tidak ada data di localStorage');
+        return false;
+      }
+      
+      // PERBAIKAN: Definisikan variabel d dengan benar
+      const d = JSON.parse(raw);
+      karyawan = d.karyawan || [];
+      rekapanData = d.rekapanData || {};
+      pphData = d.pphData || {};
+      
+      // Inisialisasi array untuk semua bulan
+      MONTHS.forEach(m => { 
+        if(!rekapanData[m]) rekapanData[m] = []; 
+        if(!pphData[m]) pphData[m] = []; 
+      });
+      
+      renderAll();
+      console.log('✅ Data dimuat dari localStorage');
+      return true;
     }
+    
+    // Jika login, gunakan Firebase
+    console.log('✅ Muat dari Firebase');
     const uid = auth.currentUser.uid;
     const docData = await window.loadUserDoc(uid);
+    
     if(!docData) {
-      MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+      console.log('❌ Tidak ada data di Firebase');
+      // Inisialisasi array kosong
+      MONTHS.forEach(m => { 
+        if(!rekapanData[m]) rekapanData[m] = []; 
+        if(!pphData[m]) pphData[m] = []; 
+      });
       return false;
     }
+    
     karyawan = docData.karyawan || [];
     rekapanData = docData.rekapanData || {};
     pphData = docData.pphData || {};
-    MONTHS.forEach(m => { if(!rekapanData[m]) rekapanData[m] = []; if(!pphData[m]) pphData[m] = []; });
+    
+    // Inisialisasi array untuk semua bulan
+    MONTHS.forEach(m => { 
+      if(!rekapanData[m]) rekapanData[m] = []; 
+      if(!pphData[m]) pphData[m] = []; 
+    });
+    
     renderAll();
+    console.log('✅ Data dimuat dari Firebase');
     return true;
+    
   }catch(err){
     console.error('loadStorage error', err);
-    alert('Gagal memuat data dari Firebase: ' + err.message);
+    alert('Gagal memuat data: ' + err.message);
     return false;
   }
 }
-; pphData = d.pphData||{}; MONTHS.forEach(m=>{ if(!rekapanData[m]) rekapanData[m]=[]; if(!pphData[m]) pphData[m]=[]; });
 
 // ---------- Karyawan UI ----------
 function showTab(name){
